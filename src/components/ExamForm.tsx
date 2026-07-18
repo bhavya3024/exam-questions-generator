@@ -170,6 +170,7 @@ function NumberInput({
 export default function ExamForm() {
   const [form, setForm] = useState<GenerateRequest>(DEFAULT_FORM);
   const [isLoading, setIsLoading] = useState(false);
+  const [isAssetsLoading, setIsAssetsLoading] = useState(false);
   const [libraryAssets, setLibraryAssets] = useState<Asset[]>([]);
   const [selectedAssetUrls, setSelectedAssetUrls] = useState<string[]>([]);
   const router = useRouter();
@@ -291,6 +292,7 @@ export default function ExamForm() {
   // Fetch catalog reference assets matching selected Class and Subject
   useEffect(() => {
     const fetchAssets = async () => {
+      setIsAssetsLoading(true);
       try {
         const res = await fetch(`/api/assets?cbse_class=${form.cbse_class}&subject=${encodeURIComponent(form.subject)}`);
         if (res.ok) {
@@ -302,6 +304,8 @@ export default function ExamForm() {
         }
       } catch (err) {
         console.error("Failed to load catalog references", err);
+      } finally {
+        setIsAssetsLoading(false);
       }
     };
     fetchAssets();
@@ -524,7 +528,27 @@ export default function ExamForm() {
       {/* Section 4: Reference Materials */}
       <FormSection number={4} title="Reference NCERT Textbooks, Past Papers & Syllabi">
         {/* Curated assets list */}
-        {libraryAssets.length > 0 && (
+        {isAssetsLoading ? (
+          <div style={{ marginBottom: "20px", padding: "16px", borderRadius: "10px", background: "rgba(99,102,241,0.03)", border: "1px solid rgba(99,102,241,0.1)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "16px" }}>
+              <div className="skeleton animate-pulse-glow" style={{ width: "16px", height: "16px", background: "rgba(99,102,241,0.2)" }} />
+              <div className="skeleton" style={{ width: "220px", height: "14px" }} />
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+              {[1, 2, 3, 4].map((i) => (
+                <div
+                  key={i}
+                  className="skeleton"
+                  style={{
+                    height: "54px",
+                    width: "100%",
+                    borderRadius: "8px"
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+        ) : libraryAssets.length > 0 ? (
           <div style={{ marginBottom: "20px", padding: "16px", borderRadius: "10px", background: "rgba(99,102,241,0.03)", border: "1px solid rgba(99,102,241,0.1)" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
               <Library size={16} color="#6366f1" />
@@ -568,6 +592,12 @@ export default function ExamForm() {
                 );
               })}
             </div>
+          </div>
+        ) : (
+          <div style={{ marginBottom: "20px", padding: "16px", borderRadius: "10px", background: "rgba(255,255,255,0.01)", border: "1px solid rgba(255,255,255,0.04)", textAlign: "center" }}>
+            <p style={{ fontSize: "12px", color: "#64748b", margin: 0 }}>
+              No reference materials found in library for Class {form.cbse_class} {form.subject}. You can upload custom files below.
+            </p>
           </div>
         )}
 
