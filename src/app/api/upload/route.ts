@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
     } else {
       // Use standard Vercel Blob storage
       const blob = await put(`exam-docs/${safeFilename}`, file, {
-        access: "public",
+        access: "private",
         token: token,
       });
       fileUrl = blob.url;
