@@ -233,19 +233,7 @@ export default function ExamForm() {
   };
 
   const handleCountChange = (key: keyof GenerateRequest, val: number) => {
-    setForm((prev) => {
-      const next = { ...prev, [key]: val };
-      const nextMarks =
-        next.mcq_count * 1 +
-        next.assertion_reason_count * 1 +
-        next.very_short_answer_count * 2 +
-        next.short_answer_count * 2 +
-        next.short_answer_ii_count * 3 +
-        next.long_answer_count * 5 +
-        next.case_based_count * 4;
-      next.total_marks = nextMarks;
-      return next;
-    });
+    setForm((prev) => ({ ...prev, [key]: val }));
   };
 
   const handleDifficultyChange = (key: "easy_percent" | "medium_percent" | "hard_percent", val: number) => {
