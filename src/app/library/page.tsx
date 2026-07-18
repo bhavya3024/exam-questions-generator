@@ -40,6 +40,7 @@ export default function LibraryPage() {
   const [selectedClass, setSelectedClass] = useState<string>("10");
   const [selectedSubject, setSelectedSubject] = useState<string>("Science");
   const [assets, setAssets] = useState<Asset[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
   const [uploadingCategory, setUploadingCategory] = useState<string | null>(null);
 
   // Sync subject dropdown when class changes
@@ -52,6 +53,7 @@ export default function LibraryPage() {
 
   // Load assets matching Class & Subject
   const loadAssets = async () => {
+    setIsLoading(true);
     try {
       const res = await fetch(`/api/assets?cbse_class=${selectedClass}&subject=${encodeURIComponent(selectedSubject)}`);
       if (res.ok) {
@@ -60,6 +62,8 @@ export default function LibraryPage() {
       }
     } catch (err) {
       console.error("Failed to load curriculum assets", err);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -239,7 +243,21 @@ export default function LibraryPage() {
 
               {/* Uploaded File List */}
               <div style={{ flex: 1, marginTop: "20px", display: "flex", flexDirection: "column", gap: "8px", maxHeight: "240px", overflowY: "auto", paddingRight: "4px" }} className="scroll-area">
-                {categoryAssets.length === 0 ? (
+                {isLoading ? (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "8px", width: "100%" }}>
+                    {[1, 2, 3].map((i) => (
+                      <div
+                        key={i}
+                        className="skeleton"
+                        style={{
+                          height: "36px",
+                          width: "100%",
+                          borderRadius: "8px"
+                        }}
+                      />
+                    ))}
+                  </div>
+                ) : categoryAssets.length === 0 ? (
                   <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", border: "1px dashed rgba(255,255,255,0.03)", borderRadius: "10px", padding: "20px", opacity: 0.5 }}>
                     <File size={20} color="#475569" style={{ marginBottom: "6px" }} />
                     <span style={{ fontSize: "12px", color: "#64748b" }}>No files reference</span>
