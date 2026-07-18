@@ -1,16 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 
-const AGENT_URL = process.env.NEXT_PUBLIC_AGENT_URL || "http://localhost:2024";
+const AGENT_URL = process.env.NEXT_PUBLIC_AGENT_URL || "http://localhost:8000";
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    // 1. Generate a unique run ID for this generation session
-    const runId = crypto.randomUUID();
-
-    // 2. Fetch matching reference documents from MongoDB paths based on class and subject
+    // 1. Fetch matching reference documents from MongoDB paths based on class and subject
     let documentUrls: string[] = [];
     try {
       const db = await getDb();
@@ -28,7 +25,7 @@ export async function POST(request: NextRequest) {
       console.error("Warning: Failed to fetch reference files from MongoDB, proceeding with empty reference list:", dbErr);
     }
 
-    // 3. Merge MongoDB references with any ad-hoc files uploaded in this request session
+    // 2. Merge MongoDB references with any ad-hoc files uploaded in this request session
     const combinedUrls = Array.from(new Set([
       ...documentUrls,
       ...(body.document_urls || [])
@@ -50,88 +47,42 @@ export async function POST(request: NextRequest) {
       easy_percent: body.easy_percent || 30,
       medium_percent: body.medium_percent || 50,
       hard_percent: body.hard_percent || 20,
+      document_urls: combinedUrls,
       special_instructions: body.special_instructions || ""
     };
 
-    // 4. Save the run configuration to MongoDB
-    const db = await getDb();
-    await db.collection("papers").insertOne({
-      _id: runId as any,
-      run_id: runId,
-      status: "processing",
-      progress: 10,
-      status_message: "Initializing generation session...",
-      exam_config: examConfig,
-      document_urls: combinedUrls,
-      created_at: new Date().toISOString()
-    });
-
-    console.log(`✨ Created generation session ${runId} with ${combinedUrls.length} references`);
-
-    // 5. Trigger LangGraph background run asynchronously (non-blocking) on port 2024 using thread run triggers
+    // 3. Trigger FastAPI backend generation
     try {
-      console.log(`🚀 Creating LangGraph thread at ${AGENT_URL}/threads`);
-      const threadRes = await fetch(`${AGENT_URL}/threads`, {
+      console.log(`🚀 Triggering FastAPI backend at ${AGENT_URL}/generate`);
+      const runRes = await fetch(`${AGENT_URL}/generate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
-      });
-
-      if (!threadRes.ok) {
-        throw new Error(`Failed to create thread: ${threadRes.statusText}`);
-      }
-
-      const threadData = await threadRes.json();
-      const threadId = threadData.thread_id;
-      console.log(`🧵 Created thread ${threadId}. Triggering background run...`);
-
-      const agentPayload = {
-        assistant_id: "exam-generator",
-        input: {
-          run_id: runId,
-          exam_config: {
-            ...examConfig,
-            document_urls: combinedUrls
-          }
-        }
-      };
-
-      // Trigger the background run (this endpoint returns immediately and enqueues the job)
-      const runRes = await fetch(`${AGENT_URL}/threads/${threadId}/runs`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(agentPayload),
+        body: JSON.stringify(examConfig),
       });
 
       if (!runRes.ok) {
         const errText = await runRes.text();
-        console.error(`Agent failed to trigger run on thread: ${errText}`);
+        console.error(`Backend failed to trigger run: ${errText}`);
+        return NextResponse.json(
+          { error: `Failed to communicate with LangGraph engine. Is the dev server running? ${errText}` },
+          { status: 502 }
+        );
       }
 
-      console.log(`✅ LangGraph background run initiated successfully on thread ${threadId} for session ${runId}`);
+      const data = await runRes.json();
+      console.log(`✅ Generation session started successfully. Run ID: ${data.run_id}`);
+      
+      // Return 201 Created
+      return NextResponse.json(data, { status: 201 });
+      
     } catch (agentErr) {
-      console.error("Error triggering LangGraph background run:", agentErr);
-      // Update record to show background run failed to start
-      await db.collection("papers").updateOne(
-        { run_id: runId },
-        {
-          $set: {
-            status: "error",
-            error: "Failed to communicate with LangGraph background engine."
-          }
-        }
-      );
+      console.error("Error triggering FastAPI backend run:", agentErr);
       return NextResponse.json(
         { error: "Failed to communicate with LangGraph engine. Is the dev server running?" },
         { status: 502 }
       );
     }
 
-    // Return 201 Created as requested
-    return NextResponse.json({
-      run_id: runId,
-      status: "processing"
-    }, { status: 201 });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "Failed to create generation session";
     console.error("API error creating generation session:", err);
