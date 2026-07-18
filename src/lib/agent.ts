@@ -39,7 +39,8 @@ export interface Question {
 }
 
 export interface Section {
-  section_id: string;
+  name: string;
+  section_id?: string;
   description: string;
   total_marks: number;
   question_ids: string[];

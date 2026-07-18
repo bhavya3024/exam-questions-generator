@@ -58,6 +58,8 @@ function QuestionCard({ q, index, showAnswers }: { q: Question; index: number; s
           {q.options.map((opt, i) => {
             const letter = OPTIONS[i];
             const isCorrect = showAnswers && (q.correct_answer === letter || q.correct_answer === letter.toUpperCase());
+            // Strip leading "(a) ", "(b) ", etc. if the backend already included them
+            const cleanOpt = opt.replace(/^\([a-dA-D]\)\s*/, "");
             return (
               <div
                 key={i}
@@ -70,7 +72,7 @@ function QuestionCard({ q, index, showAnswers }: { q: Question; index: number; s
                 }}
               >
                 <span>({letter})</span>
-                <span>{opt}</span>
+                <span>{cleanOpt}</span>
               </div>
             );
           })}
@@ -218,34 +220,45 @@ export default function QuestionPaperView({ paper, showAnswers = false }: Props)
         </div>
 
         {/* Sections */}
-        {paper.sections.map((section, sIdx) => {
-          const sectionQuestions = section.question_ids
-            .map((id) => questionMap[id])
-            .filter(Boolean);
+        {(() => {
+          let globalIndex = 0;
+          return paper.sections.map((section, sIdx) => {
+            const sectionQuestions = section.question_ids
+              .map((id) => questionMap[id])
+              .filter(Boolean);
 
-          if (sectionQuestions.length === 0) return null;
+            if (sectionQuestions.length === 0) return null;
 
-          return (
-            <div key={sIdx} style={{ marginBottom: "32px" }}>
-              {/* Section header */}
-              <div style={{ textAlign: "center", marginBottom: "24px" }}>
-                <h3 style={{ fontWeight: 700, fontSize: "16px", textTransform: "uppercase", margin: 0 }}>
-                  SECTION {section.section_id}
-                </h3>
-                {section.description && (
-                  <p style={{ fontSize: "14px", fontStyle: "italic", margin: "4px 0 0 0" }}>
-                    ({section.description})
-                  </p>
-                )}
+            // Extract section letter from name like "Section A — ..." or fallback to A/B/C/D/E
+            const sectionLetters = ["A", "B", "C", "D", "E"];
+            const nameMatch = section.name?.match(/Section\s+([A-E])/i);
+            const sectionLetter = nameMatch ? nameMatch[1].toUpperCase() : sectionLetters[sIdx] || "";
+
+            const startIndex = globalIndex;
+            globalIndex += sectionQuestions.length;
+
+            return (
+              <div key={sIdx} style={{ marginBottom: "32px" }}>
+                {/* Section header */}
+                <div style={{ textAlign: "center", marginBottom: "24px" }}>
+                  <h3 style={{ fontWeight: 700, fontSize: "16px", textTransform: "uppercase", margin: 0 }}>
+                    SECTION {sectionLetter}
+                  </h3>
+                  {section.description && (
+                    <p style={{ fontSize: "14px", fontStyle: "italic", margin: "4px 0 0 0" }}>
+                      ({section.description})
+                    </p>
+                  )}
+                </div>
+
+                {/* Questions */}
+                {sectionQuestions.map((q, qIdx) => (
+                  <QuestionCard key={q.question_id} q={q} index={startIndex + qIdx} showAnswers={showAns} />
+                ))}
               </div>
-
-              {/* Questions */}
-              {sectionQuestions.map((q, qIdx) => (
-                <QuestionCard key={q.question_id} q={q} index={qIdx} showAnswers={showAns} />
-              ))}
-            </div>
-          );
-        })}
+            );
+          });
+        })()}
 
         {/* Footer */}
         <div style={{ textAlign: "center", paddingTop: "20px", borderTop: "1px solid #000", fontSize: "12px", marginTop: "40px" }}>
