@@ -233,7 +233,109 @@ export default function ExamForm() {
   };
 
   const handleCountChange = (key: keyof GenerateRequest, val: number) => {
-    setForm((prev) => ({ ...prev, [key]: val }));
+    setForm((prev) => {
+      const next = { ...prev, [key]: val };
+      const target = prev.total_marks;
+
+      const getSum = (f: GenerateRequest) => 
+        (f.mcq_count || 0) * 1 +
+        (f.assertion_reason_count || 0) * 1 +
+        (f.very_short_answer_count || 0) * 2 +
+        (f.short_answer_count || 0) * 2 +
+        (f.short_answer_ii_count || 0) * 3 +
+        (f.long_answer_count || 0) * 5 +
+        (f.case_based_count || 0) * 4;
+
+      let currentSum = getSum(next);
+      let diff = target - currentSum;
+
+      if (diff === 0) return next;
+
+      type CountKey = 
+        | "mcq_count"
+        | "assertion_reason_count"
+        | "very_short_answer_count"
+        | "short_answer_count"
+        | "short_answer_ii_count"
+        | "long_answer_count"
+        | "case_based_count";
+
+      const adjustKeys: CountKey[] = [
+        "mcq_count",
+        "assertion_reason_count",
+        "very_short_answer_count",
+        "short_answer_count",
+        "short_answer_ii_count",
+        "long_answer_count",
+        "case_based_count"
+      ].filter(k => k !== key) as CountKey[];
+
+      const weights: Record<CountKey, number> = {
+        mcq_count: 1,
+        assertion_reason_count: 1,
+        very_short_answer_count: 2,
+        short_answer_count: 2,
+        short_answer_ii_count: 3,
+        long_answer_count: 5,
+        case_based_count: 4
+      };
+
+      let iterations = 0;
+      while (diff !== 0 && iterations < 100) {
+        iterations++;
+        const prevDiff = diff;
+
+        if (diff > 0) {
+          // Add marks: sort keys ascending by weight
+          const sorted = [...adjustKeys].sort((a, b) => weights[a] - weights[b]);
+          let incremented = false;
+          for (const k of sorted) {
+            const w = weights[k];
+            if (w <= diff) {
+              next[k] = (((next[k] as number) || 0) + 1) as any;
+              diff -= w;
+              incremented = true;
+              break;
+            }
+          }
+          if (!incremented) {
+            const k = sorted[0];
+            next[k] = (((next[k] as number) || 0) + 1) as any;
+            diff -= weights[k];
+          }
+        } else {
+          // Subtract marks: sort keys descending by weight
+          const sorted = [...adjustKeys].sort((a, b) => weights[b] - weights[a]);
+          let decremented = false;
+          for (const k of sorted) {
+            const w = weights[k];
+            const currentVal = (next[k] as number) || 0;
+            if (currentVal > 0 && w <= -diff) {
+              next[k] = (currentVal - 1) as any;
+              diff += w;
+              decremented = true;
+              break;
+            }
+          }
+          if (!decremented) {
+            for (const k of sorted) {
+              const currentVal = (next[k] as number) || 0;
+              if (currentVal > 0) {
+                next[k] = (currentVal - 1) as any;
+                diff += weights[k];
+                decremented = true;
+                break;
+              }
+            }
+          }
+          if (!decremented) break;
+        }
+
+        if (diff === prevDiff) break;
+      }
+
+      return next;
+    });
   };
 
   const handleDifficultyChange = (key: "easy_percent" | "medium_percent" | "hard_percent", val: number) => {
