@@ -39,7 +39,7 @@ export interface Question {
 }
 
 export interface Section {
-  name: string;
+  section_id: string;
   description: string;
   total_marks: number;
   question_ids: string[];
