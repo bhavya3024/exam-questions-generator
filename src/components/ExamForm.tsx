@@ -178,6 +178,39 @@ export default function ExamForm() {
     setForm((prev) => ({ ...prev, [key]: val }));
   };
 
+  const handleDifficultyChange = (key: "easy_percent" | "medium_percent" | "hard_percent", val: number) => {
+    setForm((prev) => {
+      const diff = val - prev[key];
+      if (diff === 0) return prev;
+      
+      const otherKeys = (["easy_percent", "medium_percent", "hard_percent"] as const).filter(k => k !== key);
+      const k1 = otherKeys[0];
+      const k2 = otherKeys[1];
+      
+      let v1 = prev[k1];
+      let v2 = prev[k2];
+      
+      const remain = 100 - val;
+      if (remain < 0) return prev; 
+      
+      if (v1 + v2 === 0) {
+         v1 = Math.floor(remain / 2);
+         v2 = remain - v1;
+      } else {
+         const ratio = v1 / (v1 + v2);
+         v1 = Math.round(remain * ratio);
+         v2 = remain - v1;
+      }
+      
+      return {
+        ...prev,
+        [key]: val,
+        [k1]: v1,
+        [k2]: v2
+      };
+    });
+  };
+
   // Change subject when cbse_class changes to match available subjects
   useEffect(() => {
     const subjects = CBSE_SUBJECTS[form.cbse_class] || [];
@@ -400,7 +433,7 @@ export default function ExamForm() {
               type="range"
               min={0} max={100} step={5}
               value={form[key]}
-              onChange={(e) => set(key, parseInt(e.target.value))}
+              onChange={(e) => handleDifficultyChange(key, parseInt(e.target.value))}
               style={{
                 accentColor: color,
               }}
