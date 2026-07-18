@@ -179,164 +179,7 @@ export default function ExamForm() {
     setForm((prev) => ({ ...prev, [key]: val }));
   };
 
-  const handleTotalMarksChange = (target: number) => {
-    if (target < 10 || target > 200) {
-      setForm((prev) => ({ ...prev, total_marks: target }));
-      return;
-    }
 
-    const sectionAMarks = Math.round(target * 0.25);
-    const sectionBMarks = Math.round(target * 0.15);
-    const sectionCMarks = Math.round(target * 0.26);
-    const sectionDMarks = Math.round(target * 0.19);
-    const sectionEMarks = target - sectionAMarks - sectionBMarks - sectionCMarks - sectionDMarks;
-
-    let mcq = Math.round(sectionAMarks * 0.8);
-    let ar = sectionAMarks - mcq;
-    let vsa = Math.floor(sectionBMarks / 2);
-    let saII = Math.floor(sectionCMarks / 3);
-    let la = Math.floor(sectionDMarks / 5);
-    let cb = Math.floor(sectionEMarks / 4);
-
-    let currentTotal = mcq * 1 + ar * 1 + vsa * 2 + saII * 3 + la * 5 + cb * 4;
-    let iterations = 0;
-    while (currentTotal !== target && iterations < 100) {
-      iterations++;
-      const diff = target - currentTotal;
-      if (diff > 0) {
-        if (diff >= 5) { la += 1; currentTotal += 5; }
-        else if (diff >= 4) { cb += 1; currentTotal += 4; }
-        else if (diff >= 3) { saII += 1; currentTotal += 3; }
-        else if (diff >= 2) { vsa += 1; currentTotal += 2; }
-        else { mcq += 1; currentTotal += 1; }
-      } else {
-        if (diff <= -5 && la > 0) { la -= 1; currentTotal -= 5; }
-        else if (diff <= -4 && cb > 0) { cb -= 1; currentTotal -= 4; }
-        else if (diff <= -3 && saII > 0) { saII -= 1; currentTotal -= 3; }
-        else if (diff <= -2 && vsa > 0) { vsa -= 1; currentTotal -= 2; }
-        else if (mcq > 0) { mcq -= 1; currentTotal -= 1; }
-        else { break; }
-      }
-    }
-
-    setForm((prev) => ({
-      ...prev,
-      total_marks: target,
-      mcq_count: Math.max(0, mcq),
-      assertion_reason_count: Math.max(0, ar),
-      very_short_answer_count: Math.max(0, vsa),
-      short_answer_count: 0,
-      short_answer_ii_count: Math.max(0, saII),
-      long_answer_count: Math.max(0, la),
-      case_based_count: Math.max(0, cb),
-    }));
-  };
-
-  const handleCountChange = (key: keyof GenerateRequest, val: number) => {
-    setForm((prev) => {
-      const next = { ...prev, [key]: val };
-      const target = prev.total_marks;
-
-      const getSum = (f: GenerateRequest) => 
-        (f.mcq_count || 0) * 1 +
-        (f.assertion_reason_count || 0) * 1 +
-        (f.very_short_answer_count || 0) * 2 +
-        (f.short_answer_count || 0) * 2 +
-        (f.short_answer_ii_count || 0) * 3 +
-        (f.long_answer_count || 0) * 5 +
-        (f.case_based_count || 0) * 4;
-
-      let currentSum = getSum(next);
-      let diff = target - currentSum;
-
-      if (diff === 0) return next;
-
-      type CountKey = 
-        | "mcq_count"
-        | "assertion_reason_count"
-        | "very_short_answer_count"
-        | "short_answer_count"
-        | "short_answer_ii_count"
-        | "long_answer_count"
-        | "case_based_count";
-
-      const adjustKeys: CountKey[] = [
-        "mcq_count",
-        "assertion_reason_count",
-        "very_short_answer_count",
-        "short_answer_count",
-        "short_answer_ii_count",
-        "long_answer_count",
-        "case_based_count"
-      ].filter(k => k !== key) as CountKey[];
-
-      const weights: Record<CountKey, number> = {
-        mcq_count: 1,
-        assertion_reason_count: 1,
-        very_short_answer_count: 2,
-        short_answer_count: 2,
-        short_answer_ii_count: 3,
-        long_answer_count: 5,
-        case_based_count: 4
-      };
-
-      let iterations = 0;
-      while (diff !== 0 && iterations < 100) {
-        iterations++;
-        const prevDiff = diff;
-
-        if (diff > 0) {
-          // Add marks: sort keys ascending by weight
-          const sorted = [...adjustKeys].sort((a, b) => weights[a] - weights[b]);
-          let incremented = false;
-          for (const k of sorted) {
-            const w = weights[k];
-            if (w <= diff) {
-              next[k] = (((next[k] as number) || 0) + 1) as any;
-              diff -= w;
-              incremented = true;
-              break;
-            }
-          }
-          if (!incremented) {
-            const k = sorted[0];
-            next[k] = (((next[k] as number) || 0) + 1) as any;
-            diff -= weights[k];
-          }
-        } else {
-          // Subtract marks: sort keys descending by weight
-          const sorted = [...adjustKeys].sort((a, b) => weights[b] - weights[a]);
-          let decremented = false;
-          for (const k of sorted) {
-            const w = weights[k];
-            const currentVal = (next[k] as number) || 0;
-            if (currentVal > 0 && w <= -diff) {
-              next[k] = (currentVal - 1) as any;
-              diff += w;
-              decremented = true;
-              break;
-            }
-          }
-          if (!decremented) {
-            for (const k of sorted) {
-              const currentVal = (next[k] as number) || 0;
-              if (currentVal > 0) {
-                next[k] = (currentVal - 1) as any;
-                diff += weights[k];
-                decremented = true;
-                break;
-              }
-            }
-          }
-          if (!decremented) break;
-        }
-
-        if (diff === prevDiff) break;
-      }
-
-      return next;
-    });
-  };
 
   const handleDifficultyChange = (key: "easy_percent" | "medium_percent" | "hard_percent", val: number) => {
     setForm((prev) => {
@@ -407,21 +250,6 @@ export default function ExamForm() {
     );
   };
 
-  const totalQuestions =
-    form.mcq_count + form.assertion_reason_count + form.very_short_answer_count +
-    form.short_answer_count + form.short_answer_ii_count +
-    form.long_answer_count + form.case_based_count;
-
-  // Calculate standard marks distribution based on CBSE scheme:
-  const estimatedMarks =
-    form.mcq_count * 1 +
-    form.assertion_reason_count * 1 +
-    form.very_short_answer_count * 2 +
-    form.short_answer_count * 2 +
-    form.short_answer_ii_count * 3 +
-    form.long_answer_count * 5 +
-    form.case_based_count * 4;
-
   const diffTotal = form.easy_percent + form.medium_percent + form.hard_percent;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -429,10 +257,6 @@ export default function ExamForm() {
 
     if (!form.subject.trim()) {
       toast.error("Subject is required");
-      return;
-    }
-    if (totalQuestions === 0) {
-      toast.error("Add at least one question");
       return;
     }
     if (diffTotal !== 100) {
@@ -516,7 +340,7 @@ export default function ExamForm() {
               type="number"
               className="input-field"
               value={form.total_marks}
-              onChange={(e) => handleTotalMarksChange(parseInt(e.target.value) || 0)}
+              onChange={(e) => set("total_marks", parseInt(e.target.value) || 80)}
               min={10} max={200}
             />
           </div>
@@ -533,57 +357,8 @@ export default function ExamForm() {
         </div>
       </FormSection>
 
-      {/* Section 2: Question Distribution */}
-      <FormSection number={2} title="CBSE Pattern Question Blueprint">
-        <p style={{ fontSize: "13px", color: "#64748b", marginBottom: "16px" }}>
-          Configure questions matching standard CBSE sections:
-        </p>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))",
-            gap: "16px",
-            marginBottom: "16px",
-          }}
-        >
-          <NumberInput label="MCQs" value={form.mcq_count} onChange={(v) => handleCountChange("mcq_count", v)} tooltip="1 mark each" />
-          <NumberInput label="Assertion-Reason" value={form.assertion_reason_count} onChange={(v) => handleCountChange("assertion_reason_count", v)} tooltip="1 mark each" />
-          <NumberInput label="Very Short Answer" value={form.very_short_answer_count} onChange={(v) => handleCountChange("very_short_answer_count", v)} tooltip="2 marks each" />
-          <NumberInput label="Short Answer-I" value={form.short_answer_count} onChange={(v) => handleCountChange("short_answer_count", v)} tooltip="2 marks each" />
-          <NumberInput label="Short Answer-II" value={form.short_answer_ii_count} onChange={(v) => handleCountChange("short_answer_ii_count", v)} tooltip="3 marks each" />
-          <NumberInput label="Long Answers" value={form.long_answer_count} onChange={(v) => handleCountChange("long_answer_count", v)} max={10} tooltip="5 marks each" />
-          <NumberInput label="Case-based" value={form.case_based_count} onChange={(v) => handleCountChange("case_based_count", v)} max={10} tooltip="4 marks each" />
-        </div>
-        <div
-          style={{
-            padding: "12px 14px",
-            borderRadius: "8px",
-            background: "rgba(99,102,241,0.06)",
-            border: "1px solid rgba(99,102,241,0.12)",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-            <Info size={14} color="#6366f1" />
-            <span style={{ fontSize: "13px", color: "#94a3b8" }}>
-              Total: <strong style={{ color: "#f1f5f9" }}>{totalQuestions} questions</strong>
-            </span>
-          </div>
-          <span style={{ fontSize: "13px", color: "#94a3b8" }}>
-            Estimated Marks: <strong style={{ color: estimatedMarks === form.total_marks ? "#10b981" : estimatedMarks > form.total_marks ? "#ef4444" : "#f59e0b" }}>{estimatedMarks} / {form.total_marks}</strong>
-            {estimatedMarks !== form.total_marks && (
-              <span style={{ fontSize: "11px", color: "#f59e0b", marginLeft: "8px" }}>
-                ({estimatedMarks > form.total_marks ? "+" : ""}{estimatedMarks - form.total_marks} marks)
-              </span>
-            )}
-          </span>
-        </div>
-      </FormSection>
-
-      {/* Section 3: Difficulty */}
-      <FormSection number={3} title="Difficulty / Cognitive Levels">
+      {/* Section 2: Difficulty */}
+      <FormSection number={2} title="Difficulty / Cognitive Levels">
         <p style={{ fontSize: "13px", color: "#64748b", marginBottom: "16px" }}>
           Distribute questions according to CBSE cognitive levels:
         </p>
@@ -615,8 +390,8 @@ export default function ExamForm() {
         )}
       </FormSection>
 
-      {/* Section 4: Reference Materials */}
-      <FormSection number={4} title="Reference NCERT Textbooks, Past Papers & Syllabi">
+      {/* Section 3: Reference Materials */}
+      <FormSection number={3} title="Reference NCERT Textbooks, Past Papers & Syllabi">
         {/* Curated assets list */}
         {isAssetsLoading ? (
           <div style={{ marginBottom: "20px", padding: "16px", borderRadius: "10px", background: "rgba(99,102,241,0.03)", border: "1px solid rgba(99,102,241,0.1)" }}>
@@ -699,8 +474,8 @@ export default function ExamForm() {
         />
       </FormSection>
 
-      {/* Section 5: Instructions */}
-      <FormSection number={5} title="CBSE Blueprint Special Instructions">
+      {/* Section 4: Instructions */}
+      <FormSection number={4} title="CBSE Blueprint Special Instructions">
         <textarea
           className="input-field"
           placeholder="e.g. Include choice in Section D; Add more numerical questions; Use CBSE 2024 Board pattern questions..."
