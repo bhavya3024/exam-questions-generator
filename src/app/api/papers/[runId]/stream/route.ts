@@ -36,9 +36,14 @@ export async function GET(
         );
       };
 
+      const sendPing = () => {
+        controller.enqueue(encoder.encode(`: ping\n\n`));
+      };
+
       let pollInterval: NodeJS.Timeout | undefined;
       let lastProgress = -1;
       let lastMessage = "";
+      let lastSentTime = Date.now();
 
       try {
         sendStatus("ingesting", 10, "Fetching config details...");
@@ -81,7 +86,11 @@ export async function GET(
             if (progress !== lastProgress || message !== lastMessage) {
               lastProgress = progress;
               lastMessage = message;
+              lastSentTime = Date.now();
               sendStatus(freshDoc.status || "processing", progress, message);
+            } else if (Date.now() - lastSentTime > 10000) {
+              sendPing();
+              lastSentTime = Date.now();
             }
           } catch (dbErr) {
             console.error("Error reading run progress from MongoDB:", dbErr);
