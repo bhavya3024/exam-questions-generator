@@ -47,9 +47,6 @@ export default function LibraryPage() {
   const [assets, setAssets] = useState<Asset[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [uploadingCategory, setUploadingCategory] = useState<string | null>(null);
-  const [extractingId, setExtractingId] = useState<string | null>(null);
-  const [viewingGraph, setViewingGraph] = useState<Asset | null>(null);
-
   // Sync subject dropdown when class changes
   useEffect(() => {
     const subjects = CBSE_SUBJECTS[selectedClass] || [];
@@ -132,39 +129,12 @@ export default function LibraryPage() {
 
       toast.success(`${file.name} uploaded successfully!`, { id: toastId });
       
-      // Automatically trigger extraction for the new asset
-      if (metaData.asset) {
-        // Need to add _id since it's added by mongo
-        metaData.asset._id = metaData.asset_id;
-        handleExtractGraph(metaData.asset);
-      }
       
       loadAssets();
     } catch (err: any) {
       toast.error(err.message || "Upload failed", { id: toastId });
     } finally {
       setUploadingCategory(null);
-    }
-  };
-
-  const handleExtractGraph = async (asset: Asset) => {
-    setExtractingId(asset._id);
-    const toastId = toast.loading(`Extracting Knowledge Graph for ${asset.filename}...`);
-    try {
-      const res = await fetch("/api/extract", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: asset.url, assetId: asset._id }),
-      });
-      if (!res.ok) {
-        throw new Error(await res.text());
-      }
-      toast.success("Graph extracted successfully!", { id: toastId });
-      loadAssets(); // Reload to get the updated asset with graph data
-    } catch (err: any) {
-      toast.error(err.message || "Extraction failed", { id: toastId });
-    } finally {
-      setExtractingId(null);
     }
   };
 
@@ -336,52 +306,6 @@ export default function LibraryPage() {
                         <span style={{ fontSize: "10px", color: "#64748b" }}>{formatSize(asset.size_bytes)}</span>
                       </div>
                       <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                        {asset.graph ? (
-                          <button
-                            onClick={() => setViewingGraph(asset)}
-                            style={{
-                              background: "rgba(16, 185, 129, 0.1)",
-                              border: "1px solid rgba(16, 185, 129, 0.3)",
-                              padding: "4px 8px",
-                              color: "#10b981",
-                              cursor: "pointer",
-                              borderRadius: "4px",
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              fontSize: "10px",
-                              fontWeight: 600,
-                            }}
-                          >
-                            <Layers size={12} style={{ marginRight: "4px" }} />
-                            View Graph
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => handleExtractGraph(asset)}
-                            disabled={extractingId === asset._id}
-                            style={{
-                              background: extractingId === asset._id ? "rgba(99,102,241,0.05)" : "rgba(99,102,241,0.1)",
-                              border: `1px solid ${extractingId === asset._id ? "rgba(99,102,241,0.1)" : "rgba(99,102,241,0.3)"}`,
-                              padding: "4px 8px",
-                              color: extractingId === asset._id ? "#64748b" : "#6366f1",
-                              cursor: extractingId === asset._id ? "not-allowed" : "pointer",
-                              borderRadius: "4px",
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              fontSize: "10px",
-                              fontWeight: 600,
-                            }}
-                          >
-                            {extractingId === asset._id ? (
-                              <div style={{ width: "12px", height: "12px", border: "2px solid rgba(255,255,255,0.2)", borderTopColor: "#6366f1", borderRadius: "50%", animation: "spin-slow 0.8s linear infinite", marginRight: "4px" }} />
-                            ) : (
-                              <Layers size={12} style={{ marginRight: "4px" }} />
-                            )}
-                            {extractingId === asset._id ? "Extracting..." : "Extract Graph"}
-                          </button>
-                        )}
                         <button
                           onClick={() => handleDelete(asset._id, asset.filename)}
                           style={{
@@ -409,62 +333,7 @@ export default function LibraryPage() {
           );
         })}
       </div>
-      {/* Graph Viewing Modal */}
-      {viewingGraph && viewingGraph.graph && (
-        <div style={{ position: "fixed", top: 0, left: 0, width: "100%", height: "100%", background: "rgba(0,0,0,0.6)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
-          <div className="glass" style={{ width: "100%", maxWidth: "800px", maxHeight: "80vh", display: "flex", flexDirection: "column", padding: "24px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-              <h3 style={{ fontSize: "18px", fontWeight: 700, color: "#f1f5f9" }}>
-                Knowledge Graph: {viewingGraph.filename}
-              </h3>
-              <button onClick={() => setViewingGraph(null)} style={{ background: "none", border: "none", color: "#64748b", cursor: "pointer", padding: "4px" }}>
-                ✕
-              </button>
-            </div>
-            
-            <div className="scroll-area" style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: "16px" }}>
-              <div>
-                <h4 style={{ fontSize: "14px", color: "#94a3b8", marginBottom: "8px" }}>Extracted Nodes ({viewingGraph.graph.nodes?.length || 0})</h4>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
-                  {viewingGraph.graph.nodes?.map((node, i) => (
-                    <span key={i} style={{ padding: "4px 10px", background: "rgba(99,102,241,0.1)", border: "1px solid rgba(99,102,241,0.2)", borderRadius: "16px", fontSize: "12px", color: "#e2e8f0" }}>
-                      <strong>{node.type}:</strong> {node.id}
-                    </span>
-                  ))}
-                  {(!viewingGraph.graph.nodes || viewingGraph.graph.nodes.length === 0) && (
-                    <span style={{ fontSize: "12px", color: "#64748b" }}>No nodes found.</span>
-                  )}
-                </div>
-              </div>
-              
-              <div>
-                <h4 style={{ fontSize: "14px", color: "#94a3b8", marginBottom: "8px" }}>Extracted Relationships ({viewingGraph.graph.relationships?.length || 0})</h4>
-                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                  {viewingGraph.graph.relationships?.map((rel, i) => (
-                    <div key={i} style={{ padding: "8px 12px", background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: "6px", fontSize: "12px", color: "#cbd5e1" }}>
-                      <span style={{ color: "#818cf8" }}>{rel.source}</span>
-                      <span style={{ margin: "0 8px", color: "#64748b" }}>-[{rel.type}]-&gt;</span>
-                      <span style={{ color: "#34d399" }}>{rel.target}</span>
-                    </div>
-                  ))}
-                  {(!viewingGraph.graph.relationships || viewingGraph.graph.relationships.length === 0) && (
-                    <span style={{ fontSize: "12px", color: "#64748b" }}>No relationships found.</span>
-                  )}
-                </div>
-              </div>
-            </div>
-            
-            <div style={{ marginTop: "16px", paddingTop: "16px", borderTop: "1px solid rgba(255,255,255,0.05)", display: "flex", justifyContent: "flex-end" }}>
-              <button 
-                onClick={() => setViewingGraph(null)}
-                style={{ background: "#334155", color: "white", border: "none", padding: "8px 16px", borderRadius: "6px", cursor: "pointer", fontSize: "13px" }}
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+
     </div>
   );
 }

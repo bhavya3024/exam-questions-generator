@@ -102,7 +102,7 @@ export function createSSEStream(
   onComplete: (data: { paper: ExamPaper }) => void,
   onError: (msg: string) => void
 ) {
-  const evtSource = new EventSource(`/api/papers/${runId}/stream`);
+  const evtSource = new EventSource(`${AGENT_URL}/stream/${runId}`);
 
   evtSource.addEventListener("status", (e) => {
     try {
