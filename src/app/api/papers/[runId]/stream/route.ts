@@ -64,7 +64,9 @@ export async function GET(
 
             // Stream errors
             if (freshDoc.status === "error" || freshDoc.error) {
-              sendError(freshDoc.error || "Generation encountered an unexpected error");
+              const errMsg = freshDoc.error || "Generation encountered an unexpected error";
+              console.error(`Backend Generation Error for run ${runId}:`, errMsg);
+              sendError(errMsg);
               clearInterval(pollInterval);
               controller.close();
               return;
