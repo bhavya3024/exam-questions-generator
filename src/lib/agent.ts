@@ -119,7 +119,7 @@ export function createSSEStream(
     evtSource.close();
   });
 
-  evtSource.addEventListener("error", (e: MessageEvent) => {
+  evtSource.addEventListener("agent_error", (e: MessageEvent) => {
     try {
       const data = JSON.parse(e.data);
       onError(data.message || "Unknown error");
@@ -129,9 +129,12 @@ export function createSSEStream(
     evtSource.close();
   });
 
-  evtSource.onerror = () => {
-    onError("SSE connection failed");
-    evtSource.close();
+  evtSource.onerror = (e) => {
+    // Only trigger network error if we haven't already closed it
+    if (evtSource.readyState !== EventSource.CLOSED) {
+      onError("SSE connection failed or interrupted");
+      evtSource.close();
+    }
   };
 
   return () => evtSource.close();
