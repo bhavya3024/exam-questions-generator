@@ -19,21 +19,33 @@ export default function FileUploadZone({ onFilesUploaded }: FileUploadZoneProps)
   const [files, setFiles] = useState<UploadedFile[]>([]);
 
   const uploadFile = async (file: File): Promise<string | null> => {
-    const formData = new FormData();
-    formData.append("file", file);
-
     try {
-      const res = await fetch("/api/upload", { method: "POST", body: formData });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || "Upload failed");
+      // Attempt Vercel Blob Client upload (bypasses 4.5MB serverless limit)
+      const { upload } = await import("@vercel/blob/client");
+      const blob = await upload(file.name, file, {
+        access: "private",
+        handleUploadUrl: "/api/upload",
+      });
+      return blob.url;
+    } catch (err) {
+      // Fallback to standard FormData (for local Mock Storage or missing Vercel config)
+      console.log("Blob client upload failed, falling back to local mock upload");
+      const formData = new FormData();
+      formData.append("file", file);
+      
+      try {
+        const res = await fetch("/api/upload", { method: "POST", body: formData });
+        if (!res.ok) {
+          const errRes = await res.json();
+          throw new Error(errRes.error || "Upload failed");
+        }
+        const data = await res.json();
+        return data.url;
+      } catch (fallbackErr: unknown) {
+        const msg = fallbackErr instanceof Error ? fallbackErr.message : "Upload failed";
+        toast.error(`Failed to upload ${file.name}: ${msg}`);
+        return null;
       }
-      const data = await res.json();
-      return data.url;
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Upload failed";
-      toast.error(`Failed to upload ${file.name}: ${msg}`);
-      return null;
     }
   };
 
@@ -73,7 +85,7 @@ export default function FileUploadZone({ onFilesUploaded }: FileUploadZoneProps)
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: { "application/pdf": [".pdf"], "text/plain": [".txt"] },
-    maxSize: 4.5 * 1024 * 1024,
+    maxSize: 500 * 1024 * 1024,
     multiple: true,
   });
 
@@ -119,7 +131,7 @@ export default function FileUploadZone({ onFilesUploaded }: FileUploadZoneProps)
               {isDragActive ? "Drop files here..." : "Drag & drop files here"}
             </p>
             <p style={{ color: "#64748b", fontSize: "13px" }}>
-              PDF or TXT · Max 4.5MB per file
+              PDF or TXT · Max 500MB per file
             </p>
           </div>
           <button

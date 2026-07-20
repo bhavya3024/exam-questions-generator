@@ -96,17 +96,29 @@ export default function LibraryPage() {
     setUploadingCategory(category);
     const toastId = toast.loading(`Uploading ${file.name} to ${category}...`);
     
-    const formData = new FormData();
-    formData.append("file", file);
-
+    let uploadUrl = "";
     try {
-      // 1. Upload to storage
-      const resUpload = await fetch("/api/upload", { method: "POST", body: formData });
-      if (!resUpload.ok) {
-        const err = await resUpload.json();
-        throw new Error(err.error || "Upload failed");
+      try {
+        // Attempt Vercel Blob Client upload
+        const { upload } = await import("@vercel/blob/client");
+        const blob = await upload(file.name, file, {
+          access: "private",
+          handleUploadUrl: "/api/upload",
+        });
+        uploadUrl = blob.url;
+      } catch (err) {
+        // Fallback for mock local storage
+        console.log("Blob client upload failed, falling back to local mock upload");
+        const formData = new FormData();
+        formData.append("file", file);
+        const resUpload = await fetch("/api/upload", { method: "POST", body: formData });
+        if (!resUpload.ok) {
+          const errRes = await resUpload.json();
+          throw new Error(errRes.error || "Upload failed");
+        }
+        const uploadData = await resUpload.json();
+        uploadUrl = uploadData.url;
       }
-      const uploadData = await resUpload.json();
 
       const resMeta = await fetch("/api/assets", {
         method: "POST",
@@ -116,7 +128,7 @@ export default function LibraryPage() {
           subject: selectedSubject,
           category,
           filename: file.name,
-          url: uploadData.url,
+          url: uploadUrl,
           size_bytes: file.size,
         }),
       });
@@ -357,7 +369,7 @@ function CategoryUploadZone({ category, color, onUpload, isUploading }: CatProps
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: { "application/pdf": [".pdf"], "text/plain": [".txt"] },
-    maxSize: 4.5 * 1024 * 1024,
+    maxSize: 500 * 1024 * 1024,
     multiple: true,
     disabled: isUploading,
   });
@@ -388,7 +400,7 @@ function CategoryUploadZone({ category, color, onUpload, isUploading }: CatProps
           <span style={{ fontSize: "12px", color: "#94a3b8" }}>
             {isDragActive ? "Drop here" : "Upload Files"}
           </span>
-          <span style={{ fontSize: "9px", color: "#475569" }}>PDF or TXT, Max 4.5MB</span>
+          <span style={{ fontSize: "9px", color: "#475569" }}>PDF or TXT, Max 500MB</span>
         </div>
       )}
     </div>
