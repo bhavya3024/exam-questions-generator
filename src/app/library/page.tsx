@@ -102,7 +102,7 @@ export default function LibraryPage() {
         // Attempt Vercel Blob Client upload
         const { upload } = await import("@vercel/blob/client");
         const blob = await upload(file.name, file, {
-          access: "public",
+          access: "private",
           handleUploadUrl: "/api/upload",
         });
         uploadUrl = blob.url;

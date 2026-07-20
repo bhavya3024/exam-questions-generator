@@ -23,7 +23,7 @@ export default function FileUploadZone({ onFilesUploaded }: FileUploadZoneProps)
       // Attempt Vercel Blob Client upload (bypasses 4.5MB serverless limit)
       const { upload } = await import("@vercel/blob/client");
       const blob = await upload(file.name, file, {
-        access: "public",
+        access: "private",
         handleUploadUrl: "/api/upload",
       });
       return blob.url;

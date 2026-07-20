@@ -104,7 +104,7 @@ export async function POST(request: NextRequest) {
     } else {
       // Use standard Vercel Blob storage (if token exists but client upload was not used)
       const blob = await put(`exam-docs/${safeFilename}`, file, {
-        access: "public", // Using public since client uploads default to public unless specified
+        access: "private",
         token: token,
       });
       fileUrl = blob.url;
