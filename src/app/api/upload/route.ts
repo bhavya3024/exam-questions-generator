@@ -26,6 +26,8 @@ export async function POST(request: NextRequest) {
             return {
               allowedContentTypes: ["application/pdf", "text/plain", "text/markdown"],
               maximumSizeInBytes: 50 * 1024 * 1024, // 50 MB
+              addRandomSuffix: false,
+              allowOverwrite: true,
               tokenPayload: JSON.stringify({}),
             };
           },
@@ -76,7 +78,7 @@ export async function POST(request: NextRequest) {
 
 
     let fileUrl = "";
-    const safeFilename = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
+    const safeFilename = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
 
     if (isMockMode) {
       console.log("⚠️ No Vercel Blob Token found. Operating in local mock storage mode.");
@@ -108,6 +110,8 @@ export async function POST(request: NextRequest) {
       const blob = await put(`exam-docs/${safeFilename}`, file, {
         access: "private",
         token: token,
+        addRandomSuffix: false,
+        allowOverwrite: true,
       });
       fileUrl = blob.url;
     }
