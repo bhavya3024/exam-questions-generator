@@ -19,7 +19,7 @@ const CBSE_SUBJECTS: Record<string, string[]> = {
 };
 
 const CATEGORIES = [
-  { id: "textbook", label: "NCERT Textbook", desc: "Official NCERT chapters or textbooks", color: "#6366f1" },
+  { id: "textbook", label: "Standard Textbook", desc: "Official curriculum chapters or textbooks", color: "#6366f1" },
   { id: "past_paper", label: "Past Board Paper", desc: "Previous years' CBSE board papers", color: "#8b5cf6" },
   { id: "syllabus", label: "Curriculum Syllabus", desc: "CBSE curriculum/syllabus files", color: "#06b6d4" },
   { id: "blueprint", label: "Design Blueprint", desc: "Marking scheme & chapter-weightage maps", color: "#10b981" },
@@ -96,17 +96,29 @@ export default function LibraryPage() {
     setUploadingCategory(category);
     const toastId = toast.loading(`Uploading ${file.name} to ${category}...`);
     
-    const formData = new FormData();
-    formData.append("file", file);
-
+    let uploadUrl = "";
     try {
-      // 1. Upload to storage
-      const resUpload = await fetch("/api/upload", { method: "POST", body: formData });
-      if (!resUpload.ok) {
-        const err = await resUpload.json();
-        throw new Error(err.error || "Upload failed");
+      try {
+        // Attempt Vercel Blob Client upload
+        const { upload } = await import("@vercel/blob/client");
+        const blob = await upload(file.name, file, {
+          access: "public",
+          handleUploadUrl: "/api/upload",
+        });
+        uploadUrl = blob.url;
+      } catch (err) {
+        // Fallback for mock local storage
+        console.log("Blob client upload failed, falling back to local mock upload");
+        const formData = new FormData();
+        formData.append("file", file);
+        const resUpload = await fetch("/api/upload", { method: "POST", body: formData });
+        if (!resUpload.ok) {
+          const errRes = await resUpload.json();
+          throw new Error(errRes.error || "Upload failed");
+        }
+        const uploadData = await resUpload.json();
+        uploadUrl = uploadData.url;
       }
-      const uploadData = await resUpload.json();
 
       const resMeta = await fetch("/api/assets", {
         method: "POST",
@@ -116,7 +128,7 @@ export default function LibraryPage() {
           subject: selectedSubject,
           category,
           filename: file.name,
-          url: uploadData.url,
+          url: uploadUrl,
           size_bytes: file.size,
         }),
       });
@@ -175,7 +187,7 @@ export default function LibraryPage() {
             Reference Curriculum Library
           </h1>
           <p style={{ color: "#64748b", fontSize: "14px", maxWidth: "600px" }}>
-            Upload syllabus blueprints, past papers, NCERT books, and design guides categorized by standard classes. The generator will pull context from here.
+            Upload syllabus blueprints, past papers, standard books, and design guides categorized by standard classes. The generator will pull context from here.
           </p>
         </div>
 

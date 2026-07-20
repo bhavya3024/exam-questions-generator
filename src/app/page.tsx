@@ -4,8 +4,8 @@ import { Sparkles, BookOpen, Upload, Zap, CheckCircle, ArrowRight, Brain, Award 
 const FEATURES = [
   {
     icon: Brain,
-    title: "CBSE Syllabus & NCERT Aligned",
-    desc: "Specifically tuned for CBSE Classes 9-12 with precise focus on NCERT textbook content.",
+    title: "CBSE Syllabus & Curriculum Aligned",
+    desc: "Specifically tuned for CBSE Classes 9-12 with precise focus on curriculum textbook content.",
     color: "#6366f1",
   },
   {
@@ -31,7 +31,7 @@ const FEATURES = [
 const STEPS = [
   { num: "01", title: "Select CBSE Class & Subject", desc: "Choose Classes 9-12 and input your targeted chapter or syllabus unit" },
   { num: "02", title: "Configure CBSE Blueprint", desc: "Specify number of questions per mark section and set Easy/Medium/Hard distribution" },
-  { num: "03", title: "Upload Textbooks & References", desc: "Upload NCERT chapters or past papers to anchor the agent's context" },
+  { num: "03", title: "Upload Textbooks & References", desc: "Upload chapters or past papers to anchor the agent's context" },
   { num: "04", title: "Download PDF & Answer Key", desc: "Generate a beautifully structured CBSE question paper with answer guidelines" },
 ];
 
@@ -100,7 +100,7 @@ export default function HomePage() {
               CBSE Exam Papers
             </span>
             <br />
-            with NCERT & RAG Support
+            with Curriculum & RAG Support
           </h1>
 
           <p
@@ -149,7 +149,7 @@ export default function HomePage() {
             {[
               { value: "Class 9-12", label: "Target Standards" },
               { value: "5 Sections", label: "CBSE Blueprint Pattern" },
-              { value: "NCERT", label: "Core Curriculum Base" },
+              { value: "Standard Textbooks", label: "Core Curriculum Base" },
             ].map(({ value, label }) => (
               <div key={label} style={{ textAlign: "center" }}>
                 <p

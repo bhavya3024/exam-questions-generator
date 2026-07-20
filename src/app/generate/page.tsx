@@ -51,7 +51,7 @@ export default function GeneratePage() {
           </span>
         </h1>
         <p style={{ color: "#64748b", fontSize: "15px", maxWidth: "540px", margin: "0 auto" }}>
-          Generate standard Class 9-12 CBSE papers. Upload NCERT textbooks or reference documents, select difficulty distribution, and create compliance-vetted exams.
+          Generate standard Class 9-12 CBSE papers. Upload textbooks or reference documents, select difficulty distribution, and create compliance-vetted exams.
         </p>
 
         {/* Quick tips */}
@@ -65,7 +65,7 @@ export default function GeneratePage() {
           }}
         >
           {[
-            { icon: BookOpen, text: "NCERT & Syllabus Aligned" },
+            { icon: BookOpen, text: "Curriculum & Syllabus Aligned" },
             { icon: ShieldCheck, text: "Vetted Marking Schemes" },
             { icon: Sparkles, text: "Competency-Based Questions" },
           ].map(({ icon: Icon, text }) => (

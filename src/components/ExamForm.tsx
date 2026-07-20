@@ -80,7 +80,7 @@ const CBSE_SUBJECTS: Record<string, string[]> = {
 };
 
 const CATEGORY_LABELS: Record<string, string> = {
-  textbook: "NCERT Textbook",
+  textbook: "Course Textbook",
   past_paper: "Past Board Paper",
   syllabus: "Curriculum Syllabus",
   blueprint: "Design Blueprint",
@@ -391,7 +391,7 @@ export default function ExamForm() {
       </FormSection>
 
       {/* Section 3: Reference Materials */}
-      <FormSection number={3} title="Reference NCERT Textbooks, Past Papers & Syllabi">
+      <FormSection number={3} title="Reference Textbooks, Past Papers & Syllabi">
         {/* Curated assets list */}
         {isAssetsLoading ? (
           <div style={{ marginBottom: "20px", padding: "16px", borderRadius: "10px", background: "rgba(99,102,241,0.03)", border: "1px solid rgba(99,102,241,0.1)" }}>

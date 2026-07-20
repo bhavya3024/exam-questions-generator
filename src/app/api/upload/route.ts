@@ -1,10 +1,50 @@
 import { put } from "@vercel/blob";
+import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
 import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 
 export async function POST(request: NextRequest) {
   try {
+    // 1. Check if this is a Vercel Blob client upload request (JSON)
+    if (request.headers.get("content-type")?.includes("application/json")) {
+      const body = (await request.json()) as HandleUploadBody;
+      try {
+        const jsonResponse = await handleUpload({
+          body,
+          request,
+          onBeforeGenerateToken: async (pathname) => {
+            return {
+              allowedContentTypes: ["application/pdf", "text/plain", "text/markdown"],
+              tokenPayload: JSON.stringify({}),
+            };
+          },
+          onUploadCompleted: async ({ blob }) => {
+            // Optionally notify agent to save metadata
+            try {
+              const agentUrl = process.env.NEXT_PUBLIC_AGENT_URL || "http://localhost:8000";
+              await fetch(`${agentUrl}/upload-metadata`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  blob_url: blob.url,
+                  filename: blob.pathname,
+                  file_type: blob.contentType,
+                  size_bytes: 0,
+                }),
+              });
+            } catch {
+              // Non-critical — agent metadata save failure should not block upload
+            }
+          },
+        });
+        return NextResponse.json(jsonResponse);
+      } catch (err) {
+        return NextResponse.json({ error: (err as Error).message }, { status: 400 });
+      }
+    }
+
+    // 2. Fallback: handle standard FormData upload (for mock mode or browsers lacking support)
     const formData = await request.formData();
     const file = formData.get("file") as File | null;
 
@@ -54,15 +94,15 @@ export async function POST(request: NextRequest) {
       console.log(`📝 Mock uploaded file saved to: ${filePath}`);
       console.log(`🔗 Mock file available at: ${fileUrl}`);
     } else {
-      // Use standard Vercel Blob storage
+      // Use standard Vercel Blob storage (if token exists but client upload was not used)
       const blob = await put(`exam-docs/${safeFilename}`, file, {
-        access: "private",
+        access: "public", // Using public since client uploads default to public unless specified
         token: token,
       });
       fileUrl = blob.url;
     }
 
-    // Optionally notify agent to save metadata
+    // Optionally notify agent to save metadata for fallback upload
     try {
       const agentUrl = process.env.NEXT_PUBLIC_AGENT_URL || "http://localhost:8000";
       await fetch(`${agentUrl}/upload-metadata`, {
@@ -76,7 +116,7 @@ export async function POST(request: NextRequest) {
         }),
       });
     } catch {
-      // Non-critical — agent metadata save failure should not block upload
+      // Non-critical
     }
 
     return NextResponse.json({
