@@ -6,8 +6,17 @@ import path from "path";
 
 export async function POST(request: NextRequest) {
   try {
+    const token = process.env.BLOB_READ_WRITE_TOKEN;
+    const isMockMode = !token || token.startsWith("vercel_blob_rw_xxxx");
+
     // 1. Check if this is a Vercel Blob client upload request (JSON)
     if (request.headers.get("content-type")?.includes("application/json")) {
+      if (isMockMode) {
+        // If there's no valid token, Vercel Blob client upload cannot work.
+        // Calling handleUpload here would generate a dev URL that causes CORS errors on production.
+        return NextResponse.json({ error: "Vercel Blob token is missing. Please configure Vercel Blob Storage in your project." }, { status: 400 });
+      }
+      
       const body = (await request.json()) as HandleUploadBody;
       try {
         const jsonResponse = await handleUpload({
@@ -16,6 +25,7 @@ export async function POST(request: NextRequest) {
           onBeforeGenerateToken: async (pathname) => {
             return {
               allowedContentTypes: ["application/pdf", "text/plain", "text/markdown"],
+              maximumSizeInBytes: 500 * 1024 * 1024, // 500 MB
               tokenPayload: JSON.stringify({}),
             };
           },
@@ -62,8 +72,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Only PDF and TXT files are supported" }, { status: 415 });
     }
 
-    const token = process.env.BLOB_READ_WRITE_TOKEN;
-    const isMockMode = !token || token.startsWith("vercel_blob_rw_xxxx");
+
 
     let fileUrl = "";
     const safeFilename = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
