@@ -29,7 +29,13 @@ export async function POST(request: NextRequest) {
     const combinedUrls = Array.from(new Set([
       ...documentUrls,
       ...(body.document_urls || [])
-    ]));
+    ])).map(url => {
+      if (typeof url === 'string' && url.includes("blob.vercel-storage.com")) {
+        const origin = request.headers.get("origin") || request.nextUrl.origin;
+        return `${origin}/api/download?url=${encodeURIComponent(url)}`;
+      }
+      return url;
+    });
 
     const examConfig = {
       subject: body.subject,
