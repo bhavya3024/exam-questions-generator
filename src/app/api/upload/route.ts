@@ -24,7 +24,6 @@ export async function POST(request: NextRequest) {
           request,
           onBeforeGenerateToken: async (pathname) => {
             return {
-              allowedContentTypes: ["application/pdf", "text/plain", "text/markdown"],
               maximumSizeInBytes: 500 * 1024 * 1024, // 500 MB
               tokenPayload: JSON.stringify({}),
             };
