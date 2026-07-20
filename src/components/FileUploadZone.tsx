@@ -85,7 +85,7 @@ export default function FileUploadZone({ onFilesUploaded }: FileUploadZoneProps)
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: { "application/pdf": [".pdf"], "text/plain": [".txt"] },
-    maxSize: 500 * 1024 * 1024,
+    maxSize: 50 * 1024 * 1024,
     multiple: true,
   });
 
@@ -131,7 +131,7 @@ export default function FileUploadZone({ onFilesUploaded }: FileUploadZoneProps)
               {isDragActive ? "Drop files here..." : "Drag & drop files here"}
             </p>
             <p style={{ color: "#64748b", fontSize: "13px" }}>
-              PDF or TXT · Max 500MB per file
+              PDF or TXT · Max 50MB per file
             </p>
           </div>
           <button

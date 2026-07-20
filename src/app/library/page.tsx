@@ -369,7 +369,7 @@ function CategoryUploadZone({ category, color, onUpload, isUploading }: CatProps
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: { "application/pdf": [".pdf"], "text/plain": [".txt"] },
-    maxSize: 500 * 1024 * 1024,
+    maxSize: 50 * 1024 * 1024,
     multiple: true,
     disabled: isUploading,
   });
@@ -400,7 +400,7 @@ function CategoryUploadZone({ category, color, onUpload, isUploading }: CatProps
           <span style={{ fontSize: "12px", color: "#94a3b8" }}>
             {isDragActive ? "Drop here" : "Upload Files"}
           </span>
-          <span style={{ fontSize: "9px", color: "#475569" }}>PDF or TXT, Max 500MB</span>
+          <span style={{ fontSize: "9px", color: "#475569" }}>PDF or TXT, Max 50MB</span>
         </div>
       )}
     </div>
